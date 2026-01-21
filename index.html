@@ -11,7 +11,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700;900&display=swap');
-        body { font-family: 'Pretendard', sans-serif; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Pretendard', sans-serif; overflow-x: hidden; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
         .animate-fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
@@ -22,6 +22,11 @@
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.02); }
+        }
+
+        /* 버튼 상태 초기화를 위한 클래스 */
+        .btn-reset {
+            transition: none !important;
         }
     </style>
 </head>
@@ -93,7 +98,7 @@
             { id: 17, text: "회의 분위기가 다소 냉랭해지더라도 나의 행동은?", type: "TF", optionA: "논리적으로 옳은 결론을 내리기 위해 밀어붙인다", optionB: "화합을 위해 분위기를 부드럽게 전환하려 노력한다", scoreA: "T", scoreB: "F" },
             { id: 18, text: "팀원들 간의 갈등 상황에서 내가 취하는 입장은?", type: "TF", optionA: "누가 더 합리적인 주장을 하는지 시시비비를 가린다", optionB: "서로의 감정을 이해시키고 관계를 회복하는 데 주력한다", scoreA: "T", scoreB: "F" },
             { id: 19, text: "의사결정 후 가장 듣기 좋은 말은?", type: "TF", optionA: "\"리더님은 정말 유능하고 논리적이십니다\"", optionB: "\"리더님은 참 따뜻하고 사람을 아끼십니다\"", scoreA: "T", scoreB: "F" },
-            { id: 20, text: "성과 지표는 낮지만 성실한 팀원을 대할 때 나의 내면은?", type: "TF", optionA: "조직의 효율을 위해 개선 계획을 강하게 요구한다", optionB: "그가 가진 잠재력과 노력을 믿고 기다려준다", scoreA: "T", scoreB: "F" },
+            { id: 20, text: "성과 지표는 낮지만 성실한 팀원을 대할 때 나의 내면은?", type: "TF", optionA: "조직의 효율 위해 개선 계획을 강하게 요구한다", optionB: "그가 가진 잠재력과 노력을 믿고 기다려준다", scoreA: "T", scoreB: "F" },
             { id: 21, text: "어려운 결정을 내릴 때 나를 가장 힘들게 하는 것은?", type: "TF", optionA: "논리적으로 정합성이 맞지 않는 데이터를 보는 것", optionB: "나의 결정으로 인해 상처받을 사람이 생기는 것", scoreA: "T", scoreB: "F" },
             { id: 22, text: "주간 업무 계획을 세우는 나의 스타일은?", type: "JP", optionA: "월요일 오전에 일주일의 주요 일정이 확정되어야 한다", optionB: "상황 변화에 따라 유연하게 대응하도록 여백을 둔다", scoreA: "J", scoreB: "P" },
             { id: 23, text: "회의 시간이나 마감 기한에 대한 나의 태도는?", type: "JP", optionA: "무슨 일이 있어도 엄수해야 하는 '약속'이다", optionB: "상황에 따라 조금씩 조정될 수 있는 '가이드라인'이다", scoreA: "J", scoreB: "P" },
@@ -145,23 +150,26 @@
             const handleAnswer = (choice) => {
                 if (isTransitioning) return;
 
-                // 1. 선택 상태 반영
+                // 1. 선택 상태 즉시 반영
                 setSelectedChoice(choice);
                 setIsTransitioning(true);
 
-                // 포커스 해제
+                // 모바일에서 키보드나 포커스 잔상 제거
                 if (document.activeElement) document.activeElement.blur();
 
-                // 2. 짧은 딜레이 후 다음 단계로 (사용자가 본인의 선택을 인지할 시간)
+                // 2. 짧은 딜레이 후 다음 단계로 (사용자가 본인의 선택을 인지할 시간 확보)
                 setTimeout(() => {
                     const q = questions[currentIdx];
                     const selectedChar = choice === 'A' ? q.scoreA : q.scoreB;
                     
+                    // 점수 합산
                     setScores(prev => ({ ...prev, [selectedChar]: prev[selectedChar] + 1 }));
 
+                    // 다음 문항 이동 또는 결과 페이지
                     if (currentIdx < questions.length - 1) {
+                        // 상태 초기화 순서를 엄격히 조정
+                        setSelectedChoice(null); 
                         setCurrentIdx(prev => prev + 1);
-                        setSelectedChoice(null); // 선택 초기화
                         setIsTransitioning(false);
                     } else {
                         setStep('result');
@@ -246,24 +254,29 @@
                                 <div className="grid gap-4">
                                     {['A', 'B'].map(choice => {
                                         const isSelected = selectedChoice === choice;
+                                        // key에 currentIdx를 포함시켜 문항 변경 시 요소를 강제로 새로 생성하게 함
                                         return (
                                             <button 
-                                                key={`${currentIdx}-${choice}`} 
+                                                key={`btn-${currentIdx}-${choice}`} 
                                                 onClick={() => handleAnswer(choice)} 
                                                 disabled={isTransitioning}
                                                 className={`group w-full py-5 px-6 text-left border-2 rounded-2xl transition-all font-bold shadow-sm flex items-start gap-4 focus:outline-none 
                                                     ${isSelected 
                                                         ? 'border-indigo-600 bg-indigo-50 selection-pulse text-indigo-900' 
-                                                        : 'border-slate-100 bg-white text-slate-700'
+                                                        : 'border-slate-100 bg-white text-slate-700 active:border-indigo-200'
                                                     }
+                                                    ${isTransitioning ? 'pointer-events-none' : ''}
                                                 `}
                                             >
-                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] shrink-0 mt-0.5 font-black transition-colors
-                                                    ${isSelected 
-                                                        ? 'bg-indigo-600 text-white' 
-                                                        : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-500'
-                                                    }
-                                                `}>
+                                                <div 
+                                                    key={`circle-${currentIdx}-${choice}`}
+                                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] shrink-0 mt-0.5 font-black transition-none
+                                                        ${isSelected 
+                                                            ? 'bg-indigo-600 text-white' 
+                                                            : 'bg-slate-100 text-slate-400'
+                                                        }
+                                                    `}
+                                                >
                                                     {choice}
                                                 </div>
                                                 <span className="flex-1 text-sm sm:text-base leading-tight break-keep">
