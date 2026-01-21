@@ -1,0 +1,268 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>리더십 성향 진단</title>
+    <!-- React 및 라이브러리 로드 -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700;900&display=swap');
+        body { font-family: 'Pretendard', sans-serif; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // 아이콘 컴포넌트 (SVG 직접 구현)
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const icons = {
+                dashboard: <path d="M3 3h7v9H3V3zm11 0h7v5h-7V3zm0 9h7v9h-7v-9zM3 16h7v5H3v-5z" />,
+                shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+                chevron: <path d="M9 18l6-6-6-6" />,
+                refresh: <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />,
+                award: (
+                    <>
+                        <circle cx="12" cy="8" r="7" />
+                        <path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" />
+                    </>
+                ),
+                users: (
+                    <>
+                        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                    </>
+                ),
+                target: (
+                    <>
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="6" />
+                        <circle cx="12" cy="12" r="2" />
+                    </>
+                ),
+                zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />,
+                help: (
+                    <>
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" />
+                    </>
+                )
+            };
+            return (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {icons[name]}
+                </svg>
+            );
+        };
+
+        const questions = [
+            { id: 1, text: "회의 중 새로운 아이디어가 떠오르면?", type: "EI", optionA: "즉시 말하며 동료들과 다듬어 나간다", optionB: "머릿속으로 충분히 정리한 후 핵심을 말한다", scoreA: "E", scoreB: "I" },
+            { id: 2, text: "대규모 워크숍이나 외부 네트워킹 행사에 다녀오면?", type: "EI", optionA: "새로운 자극을 받아 에너지가 충전되는 기분이다", optionB: "혼자만의 시간이 필요할 정도로 에너지가 소진된다", scoreA: "E", scoreB: "I" },
+            { id: 3, text: "업무상 갈등을 해결해야 할 때 선호하는 방식은?", type: "EI", optionA: "직접 만나 대화하며 실시간으로 소통하는 것", optionB: "서면이나 메일로 생각을 정리하여 전달하는 것", scoreA: "E", scoreB: "I" },
+            { id: 4, text: "중요한 의사결정을 내리기 전 본인의 모습은?", type: "EI", optionA: "여러 사람의 의견을 들으며 생각을 확장한다", optionB: "혼자 조용히 자료를 검토하며 깊이 몰두한다", scoreA: "E", scoreB: "I" },
+            { id: 5, text: "업무 지시를 내릴 때 주로 활용하는 방식은?", type: "EI", optionA: "대면 설명이나 통화를 통해 맥락을 전달한다", optionB: "문서나 메시지를 통해 명확한 가이드를 전달한다", scoreA: "E", scoreB: "I" },
+            { id: 6, text: "부하 직원이 보고할 때 더 편안하게 느껴지는 상황은?", type: "EI", optionA: "직원이 직접 와서 역동적으로 설명할 때", optionB: "요약된 보고서를 먼저 읽고 나중에 대화할 때", scoreA: "E", scoreB: "I" },
+            { id: 7, text: "바쁜 업무 주간이 끝난 후 스트레스를 푸는 법은?", type: "EI", optionA: "동료나 지인들과 함께 식사하며 대화한다", optionB: "집에서 조용히 독서나 운동을 하며 휴식한다", scoreA: "E", scoreB: "I" },
+            { id: 8, text: "신규 사업 제안서를 검토할 때 가장 먼저 보는 것은?", type: "SN", optionA: "실현 가능성을 입증하는 구체적인 수치와 데이터", optionB: "이 사업이 가져올 파급력과 미래의 비전", scoreA: "S", scoreB: "N" },
+            { id: 9, text: "업무를 지시할 때 강조하는 부분은?", type: "SN", optionA: "기존의 성공 사례(Best Practice)와 검증된 방식", optionB: "기존의 틀을 깨는 새로운 시도와 창의적 아이디어", scoreA: "S", scoreB: "N" },
+            { id: 10, text: "회의가 본질에서 벗어나 추상적인 아이디어로 흐를 때 나의 반응은?", type: "SN", optionA: "지금 바로 실행 가능한 게 무엇인지 현실로 복귀시킨다", optionB: "더 흥미로운 가능성은 없는지 상상을 독려한다", scoreA: "S", scoreB: "N" },
+            { id: 11, text: "복잡한 상황을 팀원들에게 설명할 때 나의 스타일은?", type: "SN", optionA: "있는 그대로의 사실을 순차적으로 명확하게 전달한다", optionB: "비유나 상징을 활용하여 전체적인 맥락을 전달한다", scoreA: "S", scoreB: "N" },
+            { id: 12, text: "리더로서 더 큰 보람을 느끼는 순간은?", type: "SN", optionA: "현재 시스템을 안정적이고 효율적으로 운영할 때", optionB: "미래의 먹거리를 위한 새로운 기회를 포착할 때", scoreA: "S", scoreB: "N" },
+            { id: 13, text: "보고서의 완성도를 판단하는 기준은?", type: "SN", optionA: "세부 사항의 정확성과 데이터의 근거", optionB: "전체적인 흐름과 핵심 메시지의 통찰력", scoreA: "S", scoreB: "N" },
+            { id: 14, text: "트렌드 변화를 마주했을 때 나의 태도는?", type: "SN", optionA: "실질적인 효용성이 증명될 때까지 신중히 지켜본다", optionB: "새로운 변화의 징후를 읽고 선제적으로 도입하려 한다", scoreA: "S", scoreB: "N" },
+            { id: 15, text: "팀원의 업무 실수를 피드백할 때 나의 우선순위는?", type: "TF", optionA: "명확한 원인 분석과 재발 방지를 위한 대안 제시", optionB: "실망했을 팀원의 마음을 다독이고 격려하는 것", scoreA: "T", scoreB: "F" },
+            { id: 16, text: "조직 내 보상이나 인사를 결정할 때 기준은?", type: "TF", optionA: "성과 지표와 원칙에 따른 객관적인 평가", optionB: "팀원의 헌신과 개인적 상황을 고려한 배려", scoreA: "T", scoreB: "F" },
+            { id: 17, text: "회의 분위기가 다소 냉랭해지더라도 나의 행동은?", type: "TF", optionA: "논리적으로 옳은 결론을 내리기 위해 밀어붙인다", optionB: "화합을 위해 분위기를 부드럽게 전환하려 노력한다", scoreA: "T", scoreB: "F" },
+            { id: 18, text: "팀원들 간의 갈등 상황에서 내가 취하는 입장은?", type: "TF", optionA: "누가 더 합리적인 주장을 하는지 시시비비를 가린다", optionB: "서로의 감정을 이해시키고 관계를 회복하는 데 주력한다", scoreA: "T", scoreB: "F" },
+            { id: 19, text: "의사결정 후 가장 듣기 좋은 말은?", type: "TF", optionA: "\"리더님은 정말 유능하고 논리적이십니다\"", optionB: "\"리더님은 참 따뜻하고 사람을 아끼십니다\"", scoreA: "T", scoreB: "F" },
+            { id: 20, text: "성과 지표는 낮지만 성실한 팀원을 대할 때 나의 내면은?", type: "TF", optionA: "조직의 효율을 위해 개선 계획을 강하게 요구한다", optionB: "그가 가진 잠재력과 노력을 믿고 기다려준다", scoreA: "T", scoreB: "F" },
+            { id: 21, text: "어려운 결정을 내릴 때 나를 가장 힘들게 하는 것은?", type: "TF", optionA: "논리적으로 정합성이 맞지 않는 데이터를 보는 것", optionB: "나의 결정으로 인해 상처받을 사람이 생기는 것", scoreA: "T", scoreB: "F" },
+            { id: 22, text: "주간 업무 계획을 세우는 나의 스타일은?", type: "JP", optionA: "월요일 오전에 일주일의 주요 일정이 확정되어야 한다", optionB: "상황 변화에 따라 유연하게 대응하도록 여백을 둔다", scoreA: "J", scoreB: "P" },
+            { id: 23, text: "회의 시간이나 마감 기한에 대한 나의 태도는?", type: "JP", optionA: "무슨 일이 있어도 엄수해야 하는 '약속'이다", optionB: "상황에 따라 조금씩 조정될 수 있는 '가이드라인'이다", scoreA: "J", scoreB: "P" },
+            { id: 24, text: "보고서 마감일이 다가올 때 나의 행동은?", type: "JP", optionA: "미리 완료해 두고 여유 있게 최종 검토를 한다", optionB: "마지막 순간까지 새로운 정보를 반영하며 수정한다", scoreA: "J", scoreB: "P" },
+            { id: 25, text: "회의 진행 방식 중 더 선호하는 것은?", type: "JP", optionA: "사전에 정해진 의제(Agenda)에 따라 일사불란하게 진행", optionB: "자유로운 분위기에서 다양한 의견이 오가는 끝장 토론", scoreA: "J", scoreB: "P" },
+            { id: 26, text: "책상 위나 업무 파일 정리 상태는?", type: "JP", optionA: "카테고리별로 체계적으로 분류되어 즉시 찾을 수 있다", optionB: "다소 혼잡해 보일 수 있으나 나만의 흐름대로 놓여 있다", scoreA: "J", scoreB: "P" },
+            { id: 27, text: "갑작스러운 업무 지시나 변수가 발생했을 때 나의 반응은?", type: "JP", optionA: "기존 계획이 틀어지는 것에 대해 예민해지고 불편하다", optionB: "새로운 자극으로 받아들이고 순발력 있게 대처한다", scoreA: "J", scoreB: "P" },
+            { id: 28, text: "리더로서 업무를 추진할 때 더 중요한 것은?", type: "JP", optionA: "목표를 향한 체계적인 로드맵과 매뉴얼 구축", optionB: "변화하는 상황에 맞춘 유연한 전략 수정과 적응", scoreA: "J", scoreB: "P" }
+        ];
+
+        const leadershipData = {
+            ISTJ: { title: "안정적 체계의 관리자", style: "데이터 기반의 정확성과 원칙을 준수하는 리더", strength: "철저한 성과 관리와 조직의 안정성 유지", tip: "변화의 필요성을 인정하고 팀원의 정서적 지지를 강화하세요." },
+            ISFJ: { title: "헌신적 서번트 리더", style: "팀원의 고충을 살피고 묵묵히 지원하는 조력형 리더", strength: "안정적인 팀워크 조성과 꼼꼼한 실무 지원", tip: "때로는 조직의 목표를 위해 단호한 거절과 요구가 필요합니다." },
+            INFJ: { title: "영감을 주는 비전가", style: "가치와 의미를 중시하며 조용히 변화를 이끄는 리더", strength: "깊이 있는 통찰력과 팀원들의 내적 동기 부여", tip: "이상적인 목표를 구체적인 실행 단계로 쪼개어 제시해 주세요." },
+            INTJ: { title: "전략적 독립가", style: "효율성과 논리적 완결성을 추구하는 완벽주의 리더", strength: "복잡한 문제를 관통하는 핵심 전략 수립", tip: "결과만큼이나 팀원들이 이해하는 과정과 소통이 중요합니다." },
+            ISTP: { title: "실용적 문제 해결사", style: "위기 상황에서 핵심을 짚어내는 효율적 리더", strength: "탁월한 상황 판단력과 즉각적인 기술적 해결", tip: "팀원들과 장기적인 로드맵을 공유하려는 노력이 필요합니다." },
+            ISFP: { title: "유연한 조화가", style: "수평적인 관계 속에서 개성을 존중하는 따뜻한 리더", strength: "팀원의 강점을 발견하고 온화한 분위기 조성", tip: "조직의 위계나 엄격한 마감 관리가 필요한 순간을 직면하세요." },
+            INFP: { title: "가치 중심의 중재자", style: "개인의 성장과 신념을 중시하며 유연하게 이끄는 리더", strength: "포용적인 문화 형성과 창의적 가능성 탐색", tip: "현실적인 제약 사항과 데이터 기반의 설득력을 보완하세요." },
+            INTP: { title: "객관적 사색가", style: "논리적 정합성을 중시하며 지적으로 이끄는 리더", strength: "본질적인 문제 진단과 새로운 이론적 접근", tip: "실행을 위한 일정 관리와 팀원의 감정적 피드백에 힘써주세요." },
+            ESTP: { title: "실천적 사업가", style: "현장을 누비며 기회를 포착하고 빠르게 실행하는 리더", strength: "강력한 추진력과 위기 돌파 능력", tip: "속도보다는 방향의 정당성을 점검하는 여유를 가져보세요." },
+            ESFP: { title: "활력 넘치는 소통가", style: "즐거운 에너지를 전파하며 협력을 이끄는 리더", strength: "유연한 네트워킹과 긍정적인 조직 문화", tip: "체계적인 데이터 관리와 업무의 지속성을 유지하세요." },
+            ENFP: { title: "재기발랄한 혁신가", style: "새로운 가능성에 도전하며 열정을 전파하는 리더", strength: "탁월한 공감 능력과 창의적 문제 해결", tip: "아이디어를 실현하기 위한 디테일한 마무리 계획을 챙기세요." },
+            ENTP: { title: "논리적 도전가", style: "기존 틀에 의문을 제기하며 발전을 주도하는 리더", strength: "끊임없는 혁신과 논리적인 협상 능력", tip: "반대 의견을 가진 이들을 포용하는 감정적 지지를 잊지 마세요." },
+            ESTJ: { title: "효율적 통솔자", style: "명확한 체계와 보상을 통해 성과를 창출하는 리더", strength: "철저한 업무 조직화와 신속한 의사결정", tip: "효율성만큼이나 팀원들의 심리적 안전감도 중요합니다." },
+            ESFJ: { title: "협력적 관리자", style: "관계를 기반으로 공동체의 화합을 이끄는 리더", strength: "친화력 있는 소통과 세심한 인력 관리", tip: "갈등 상황에서 객관적인 진실을 마주할 용기가 필요합니다." },
+            ENFJ: { title: "카리스마 리더", style: "타인의 성장을 진심으로 독려하며 이끄는 리더", strength: "강력한 영향력과 협동심 유발", tip: "모두를 만족시키려 하기보다 냉정한 선택을 할 때도 있어야 합니다." },
+            ENTJ: { title: "대담한 전략가", style: "장기적 비전을 설정하고 조직을 드라이브하는 리더", strength: "체계적인 목표 달성과 거시적 변화 주도", tip: "혼자 앞서가기보다 팀원들의 속도를 살피는 겸손함이 필요합니다." }
+        };
+
+        function App() {
+            const [step, setStep] = useState('home');
+            const [currentIdx, setCurrentIdx] = useState(0);
+            const [scores, setScores] = useState({ E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 });
+
+            const startQuiz = () => {
+                setScores({ E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 });
+                setCurrentIdx(0);
+                setStep('quiz');
+            };
+
+            const handleAnswer = (choice) => {
+                const q = questions[currentIdx];
+                const selectedChar = choice === 'A' ? q.scoreA : q.scoreB;
+                setScores(prev => ({ ...prev, [selectedChar]: prev[selectedChar] + 1 }));
+
+                if (currentIdx < questions.length - 1) {
+                    setCurrentIdx(currentIdx + 1);
+                } else {
+                    setStep('result');
+                }
+            };
+
+            const getResult = () => {
+                let mbti = "";
+                mbti += scores.E >= scores.I ? "E" : "I";
+                mbti += scores.S >= scores.N ? "S" : "N";
+                mbti += scores.T >= scores.F ? "T" : "F";
+                mbti += scores.J >= scores.P ? "J" : "P";
+                return mbti;
+            };
+
+            const resultType = getResult();
+            const leaderInfo = leadershipData[resultType] || leadershipData['ISTJ'];
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-fade-in">
+                        
+                        {step === 'home' && (
+                            <div className="p-8 text-center space-y-8">
+                                <div className="pt-6">
+                                    <div className="bg-indigo-600 w-20 h-20 rounded-2xl rotate-3 flex items-center justify-center mx-auto text-white shadow-xl mb-6">
+                                        <Icon name="dashboard" size={40} />
+                                    </div>
+                                    <h1 className="text-2xl font-black text-slate-900">리더십 성향 진단</h1>
+                                    <p className="mt-4 text-slate-500 font-medium text-sm px-4">
+                                        베테랑 리더분들의 고유한 강점과<br/>의사결정 스타일을 분석하는 28문항 검사입니다.
+                                    </p>
+                                </div>
+                                <div className="bg-slate-50 rounded-2xl p-6 text-left border border-slate-200">
+                                    <div className="flex items-center gap-3 mb-4 text-indigo-600">
+                                        <Icon name="shield" size={24} />
+                                        <span className="font-bold text-slate-800">진단 가이드</span>
+                                    </div>
+                                    <ul className="text-xs text-slate-500 space-y-3 font-medium">
+                                        <li>• 총 28문항 (상황별 선택지 제공)</li>
+                                        <li>• 질문을 읽고 본인에게 더 편안한 방식을 선택하세요.</li>
+                                        <li>• 결과는 16가지 리더십 유형으로 제시됩니다.</li>
+                                    </ul>
+                                </div>
+                                <button onClick={() => setStep('intro')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                                    시작하기 <Icon name="chevron" size={20} />
+                                </button>
+                            </div>
+                        )}
+
+                        {step === 'intro' && (
+                            <div className="p-8 space-y-8">
+                                <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200 flex gap-4">
+                                    <Icon name="help" size={28} className="text-amber-500 shrink-0" />
+                                    <div className="space-y-3">
+                                        <h3 className="font-bold text-amber-900">답변 전 유의사항</h3>
+                                        <p className="text-sm text-amber-800 leading-relaxed">
+                                            사회적으로 유능해 보이는 답보다는,<br/><strong>"리더로서 내가 가장 스트레스를 덜 받는 방식"</strong>이 무엇인지 떠올려 주십시오.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button onClick={startQuiz} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-5 rounded-2xl shadow-lg">
+                                    네, 확인했습니다
+                                </button>
+                            </div>
+                        )}
+
+                        {step === 'quiz' && (
+                            <div className="p-6 sm:p-8 space-y-8">
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-indigo-600 font-black text-xl">Q.{currentIdx + 1}</span>
+                                        <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">{currentIdx + 1} / 28</span>
+                                    </div>
+                                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                        <div className="bg-indigo-500 h-full transition-all duration-300" style={{ width: `${((currentIdx + 1) / 28) * 100}%` }} />
+                                    </div>
+                                </div>
+                                <div className="min-h-[80px] flex items-center text-xl font-bold text-slate-800 leading-snug">
+                                    {questions[currentIdx].text}
+                                </div>
+                                <div className="grid gap-4">
+                                    {['A', 'B'].map(choice => (
+                                        <button key={choice} onClick={() => handleAnswer(choice)} className="w-full py-6 px-6 text-left border-2 border-slate-100 hover:border-indigo-500 hover:bg-indigo-50 rounded-2xl transition-all font-bold text-slate-700 active:bg-indigo-100 shadow-sm flex items-start gap-4 group">
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 group-hover:bg-indigo-200 flex items-center justify-center text-xs shrink-0 mt-0.5 font-black text-slate-400 group-hover:text-indigo-600 transition-colors">{choice}</div>
+                                            <span className="flex-1">{choice === 'A' ? questions[currentIdx].optionA : questions[currentIdx].optionB}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 'result' && (
+                            <div className="p-6 sm:p-8 text-center space-y-8">
+                                <div className="space-y-1">
+                                    <Icon name="award" size={48} className="mx-auto text-amber-500 mb-2" />
+                                    <p className="text-indigo-600 font-black tracking-widest text-xs uppercase">리더십 진단 결과</p>
+                                    <h2 className="text-6xl font-black text-slate-900">{resultType}</h2>
+                                </div>
+                                <div className="space-y-4 text-left">
+                                    <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
+                                        <Icon name="zap" size={140} className="absolute -right-6 -top-6 text-white opacity-10" />
+                                        <div className="relative z-10 space-y-3">
+                                            <h3 className="text-2xl font-black text-indigo-400">{leaderInfo.title}</h3>
+                                            <div className="h-1 bg-indigo-500 w-12 rounded-full"></div>
+                                            <p className="text-sm font-medium opacity-90">{leaderInfo.style}</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-3">
+                                        <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100">
+                                            <h4 className="text-emerald-900 font-black text-sm flex items-center gap-2 mb-2"><Icon name="target" size={18} /> 핵심 강점</h4>
+                                            <p className="text-emerald-800 text-xs font-medium">{leaderInfo.strength}</p>
+                                        </div>
+                                        <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100">
+                                            <h4 className="text-indigo-900 font-black text-sm flex items-center gap-2 mb-2"><Icon name="users" size={18} /> 성장 포인트</h4>
+                                            <p className="text-indigo-800 text-xs font-medium">{leaderInfo.tip}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onClick={() => setStep('home')} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-5 rounded-2xl transition-all flex items-center justify-center gap-2">
+                                    <Icon name="refresh" size={18} /> 다시 테스트하기
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <p className="absolute bottom-4 text-slate-400 text-[10px] font-bold uppercase tracking-widest text-center">Leadership Assessment Tool</p>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
